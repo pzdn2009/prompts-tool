@@ -78,7 +78,10 @@ def main(
     
     # 加载配置
     try:
-        config = Config.load(config_path)
+        if config_path:
+            config = Config.load(config_path)
+        else:
+            config = Config.load()
         console.print(f"✅ 配置加载成功", style="green")
     except Exception as e:
         console.print(f"❌ 配置加载失败: {e}", style="red")
