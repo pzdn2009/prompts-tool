@@ -94,22 +94,34 @@ def create_app():
             st.error(f"❌ Failed to get index info: {e}")
 
     # Main interface
-    tab1, tab2, tab3 = st.tabs(["🔍 Search Prompts", "📚 Browse Prompts", "📝 Fill Variables"])
+    tab1, tab2 = st.tabs(["🔍 Search & Browse", "📝 Fill Variables"])
 
     with tab1:
-        st.header("🔍 Search Prompts")
+        st.header("🔍 Search or Browse Prompts")
 
-        # Search input
-        search_query = st.text_input(
-            "Describe your need",
-            placeholder="e.g., Write a docstring for a Python function",
+        col_search, col_filter = st.columns(2)
+        with col_search:
+            search_query = st.text_input(
+                "Search prompts",
+                placeholder="e.g., Write a docstring for a Python function",
+            )
+        with col_filter:
+            filter_keyword = st.text_input(
+                "Keyword filter", placeholder="Enter keyword to filter"
+            )
+
+        preview_lines = st.number_input(
+            "Preview lines", min_value=1, max_value=10, value=3
         )
 
-        if search_query:
-            try:
-                repo = PromptRepo(config)
-                searcher = PromptSearcher(config, repo)
+        if st.button("🔄 Refresh"):
+            st.rerun()
 
+        try:
+            repo = PromptRepo(config)
+            searcher = PromptSearcher(config, repo)
+
+            if search_query:
                 with st.spinner("Searching..."):
                     results = searcher.search(search_query, top_k=5)
 
@@ -141,74 +153,51 @@ def create_app():
                 else:
                     st.warning("No related prompts found")
 
-            except Exception as e:
-                st.error(f"Search failed: {e}")
-
-    with tab2:
-        st.header("📚 Browse Prompts")
-
-        try:
-            repo = PromptRepo(config)
-
-            # Filter options
-            col1, col2 = st.columns(2)
-            with col1:
-                filter_keyword = st.text_input(
-                    "Keyword filter", placeholder="Enter keyword to filter"
-                )
-            with col2:
-                preview_lines = st.number_input(
-                    "Preview lines", min_value=1, max_value=10, value=3
-                )
-
-            if st.button("🔄 Refresh list"):
-                st.rerun()
-
-            # Get prompt list
-            prompts = repo.list_prompts(
-                preview_lines=preview_lines, filter_keyword=filter_keyword
-            )
-
-            if prompts:
-                st.success(f"Found {len(prompts)} prompt files")
-
-                for prompt in prompts:
-                    with st.expander(f"📄 {prompt['name']}"):
-                        st.markdown(f"**Path:** `{prompt['relative_path']}`")
-                        st.markdown(f"**Summary:** {prompt['summary']}")
-
-                        if "preview" in prompt:
-                            st.markdown("**Preview:**")
-                            st.code(prompt["preview"])
-
-                        # View full content
-                        if st.button(
-                            f"👀 View full content", key=f"view_{prompt['name']}"
-                        ):
-                            full_content = repo.get_prompt_content(prompt["file_path"])
-                            st.text_area(
-                                "Full content",
-                                full_content,
-                                height=300,
-                                key=f"content_{prompt['name']}",
-                            )
-
-                            # Copy button
-                            if st.button(
-                                f"📋 Copy content", key=f"copy_full_{prompt['name']}"
-                            ):
-                                clipboard = ClipboardManager()
-                                if clipboard.copy(full_content):
-                                    st.success("✅ Copied to clipboard")
-                                else:
-                                    st.error("❌ Copy failed")
             else:
-                st.warning("No prompt files found")
+                prompts = repo.list_prompts(
+                    preview_lines=preview_lines, filter_keyword=filter_keyword
+                )
+
+                if prompts:
+                    st.success(f"Found {len(prompts)} prompt files")
+
+                    for prompt in prompts:
+                        with st.expander(f"📄 {prompt['name']}"):
+                            st.markdown(f"**Path:** `{prompt['relative_path']}`")
+                            st.markdown(f"**Summary:** {prompt['summary']}")
+
+                            if "preview" in prompt:
+                                st.markdown("**Preview:**")
+                                st.code(prompt["preview"])
+
+                            # View full content
+                            if st.button(
+                                f"👀 View full content", key=f"view_{prompt['name']}"
+                            ):
+                                full_content = repo.get_prompt_content(prompt["file_path"])
+                                st.text_area(
+                                    "Full content",
+                                    full_content,
+                                    height=300,
+                                    key=f"content_{prompt['name']}",
+                                )
+
+                                # Copy button
+                                if st.button(
+                                    f"📋 Copy content", key=f"copy_full_{prompt['name']}"
+                                ):
+                                    clipboard = ClipboardManager()
+                                    if clipboard.copy(full_content):
+                                        st.success("✅ Copied to clipboard")
+                                    else:
+                                        st.error("❌ Copy failed")
+                else:
+                    st.warning("No prompt files found")
 
         except Exception as e:
-            st.error(f"Failed to list prompts: {e}")
+            st.error(f"Failed to search or browse prompts: {e}")
 
-    with tab3:
+    with tab2:
         st.header("📝 Fill Variables")
 
         st.info(
