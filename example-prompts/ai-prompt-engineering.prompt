@@ -1,0 +1,21 @@
+你是一个专业的 AI Prompt 工程师，请帮助我优化以下 Prompt：
+
+**原始 Prompt：**
+{{original_prompt}}
+
+**目标：**
+{{goal}}
+
+**约束条件：**
+{{constraints}}
+
+**期望输出格式：**
+{{output_format}}
+
+请提供：
+1. 优化后的 Prompt
+2. 优化说明和理由
+3. 使用建议和注意事项
+4. 可能的变体和扩展
+
+确保优化后的 Prompt 更加清晰、具体和有效。
