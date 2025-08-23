@@ -25,7 +25,7 @@ File "/Users/zhenpeng/git/prompts-tool/prompts_tool/core/search.py", line 10, in
 ## ✅ 解决方案
 
 ### 1. 创建简化版 Streamlit 应用
-- 新建 `streamlit_app_simple.py` 文件
+- 新建 `streamlit_app.py` 文件
 - 移除对 `PromptSearcher` 的依赖
 - 使用关键词搜索替代语义搜索
 - 添加错误处理和导入检查
@@ -47,7 +47,7 @@ File "/Users/zhenpeng/git/prompts-tool/prompts_tool/core/search.py", line 10, in
     ↓
 启动 Web 界面 (--ui)
     ↓
-简化版 Streamlit 应用 (streamlit_app_simple.py)
+Streamlit 应用 (streamlit_app.py)
     ↓
 核心模块 (config, repo, parser, clipboard)
     ↓

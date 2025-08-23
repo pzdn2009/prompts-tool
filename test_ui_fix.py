@@ -30,24 +30,23 @@ def test_imports():
         print(f"❌ Import failed: {e}")
         return False
 
-def test_simple_app():
-    """Test the simplified Streamlit app."""
-    print("\n🌐 Testing simplified Streamlit app...")
-    
-    simple_app_path = Path("prompts_tool/ui/streamlit_app_simple.py")
-    if simple_app_path.exists():
-        print("✅ Simplified Streamlit app file exists")
-        
-        # Attempt to import (without running)
+def test_streamlit_app():
+    """Test the Streamlit app."""
+    print("\n🌐 Testing Streamlit app...")
+
+    app_path = Path("prompts_tool/ui/streamlit_app.py")
+    if app_path.exists():
+        print("✅ Streamlit app file exists")
+
         try:
-            import prompts_tool.ui.streamlit_app_simple
-            print("✅ Simplified app imported successfully")
+            import prompts_tool.ui.streamlit_app
+            print("✅ Streamlit app imported successfully")
             return True
         except Exception as e:
-            print(f"❌ Simplified app import failed: {e}")
+            print(f"❌ Streamlit app import failed: {e}")
             return False
     else:
-        print("❌ Simplified Streamlit app file not found")
+        print("❌ Streamlit app file not found")
         return False
 
 def test_cli_options():
@@ -108,7 +107,7 @@ def main():
     
     tests = [
         ("Module imports", test_imports),
-        ("Simplified app", test_simple_app),
+        ("Streamlit app", test_streamlit_app),
         ("CLI options", test_cli_options),
         ("Web interface", test_web_interface),
     ]

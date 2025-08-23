@@ -31,7 +31,7 @@ def test_config():
         config = Config()
         print("✅ Configuration created successfully")
         print(f"   Repository URL: {config.repo.url}")
-        print(f"   Local path: {config.repo.local_path}")
+        print(f"   Local paths: {config.repo.local_paths}")
         print(f"   Model name: {config.model.name}")
         
         return True

@@ -78,7 +78,8 @@ prompts --ui
 # Prompt Repo 配置
 repo:
   url: "https://github.com/yourusername/prompts-repo.git"
-  local_path: "~/.prompts/repo"
+  local_paths:
+    - "~/.prompts/repo"
   branch: "main"
 
 # 模型配置

@@ -1,9 +1,5 @@
-"""UI module containing Streamlit web interfaces."""
+"""UI module containing the Streamlit web interface"""
 
-# Avoid importing problematic modules
-# from .streamlit_app import create_app
-
-# Simplified application
-from .streamlit_app_simple import create_app
+from .streamlit_app import create_app
 
 __all__ = ["create_app"]

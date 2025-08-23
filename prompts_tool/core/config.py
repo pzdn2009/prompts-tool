@@ -5,42 +5,42 @@
 import os
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 
 
 @dataclass
 class RepoConfig:
-    """Prompt Repo 配置"""
+    """Prompt repository configuration"""
     url: str = "https://github.com/yourusername/prompts-repo.git"
-    local_path: str = "~/.prompts/repo"
+    local_paths: List[str] = field(default_factory=lambda: ["~/.prompts/repo"])
     branch: str = "main"
 
 
 @dataclass
 class ModelConfig:
-    """模型配置"""
+    """Model configuration"""
     name: str = "all-MiniLM-L6-v2"
     device: str = "cpu"
 
 
 @dataclass
 class UIConfig:
-    """UI 配置"""
+    """UI configuration"""
     port: int = 8501
     host: str = "localhost"
 
 
 @dataclass
 class Config:
-    """主配置类"""
+    """Main configuration class"""
     repo: RepoConfig = field(default_factory=RepoConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     
     def __post_init__(self):
-        # 展开用户路径
-        self.repo.local_path = os.path.expanduser(self.repo.local_path)
+        # Expand user paths
+        self.repo.local_paths = [os.path.expanduser(p) for p in self.repo.local_paths]
     
     @classmethod
     def load(cls, config_path: Optional[str] = None) -> "Config":
@@ -63,17 +63,20 @@ class Config:
             # 创建配置对象
             config = cls()
             
-            # 更新 repo 配置
+            # Update repo configuration
             if "repo" in config_data:
                 repo_data = config_data["repo"]
                 if "url" in repo_data:
                     config.repo.url = repo_data["url"]
-                if "local_path" in repo_data:
-                    config.repo.local_path = repo_data["local_path"]
+                if "local_paths" in repo_data:
+                    config.repo.local_paths = repo_data["local_paths"]
+                elif "local_path" in repo_data:
+                    # Backward compatibility
+                    config.repo.local_paths = [repo_data["local_path"]]
                 if "branch" in repo_data:
                     config.repo.branch = repo_data["branch"]
             
-            # 更新 model 配置
+            # Update model configuration
             if "model" in config_data:
                 model_data = config_data["model"]
                 if "name" in model_data:
@@ -81,7 +84,7 @@ class Config:
                 if "device" in model_data:
                     config.model.device = model_data["device"]
             
-            # 更新 ui 配置
+            # Update UI configuration
             if "ui" in config_data:
                 ui_data = config_data["ui"]
                 if "port" in ui_data:
@@ -106,7 +109,7 @@ class Config:
         config_data = {
             "repo": {
                 "url": self.repo.url,
-                "local_path": self.repo.local_path,
+                "local_paths": self.repo.local_paths,
                 "branch": self.repo.branch,
             },
             "model": {
@@ -126,9 +129,13 @@ class Config:
             print(f"警告: 无法保存配置文件 {config_path}: {e}")
     
     def get_repo_path(self) -> Path:
-        """获取本地仓库路径"""
-        return Path(self.repo.local_path)
-    
+        """Get the primary local repository path"""
+        return Path(self.repo.local_paths[0])
+
+    def get_repo_paths(self) -> List[Path]:
+        """Get all configured repository paths"""
+        return [Path(p) for p in self.repo.local_paths]
+
     def get_index_path(self) -> Path:
-        """获取索引文件路径"""
-        return Path(self.repo.local_path) / ".prompts_index"
+        """Get the index file path"""
+        return self.get_repo_path() / ".prompts_index"
