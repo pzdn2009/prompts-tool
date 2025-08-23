@@ -25,33 +25,14 @@ fi
 
 echo "✅ pip3 检查通过"
 
-# 创建虚拟环境（可选）
-read -p "是否创建虚拟环境？(y/n): " create_venv
-if [[ $create_venv =~ ^[Yy]$ ]]; then
-    echo "🔧 创建虚拟环境..."
-    python3 -m venv venv
-    source venv/bin/activate
-    echo "✅ 虚拟环境已创建并激活"
-    echo "💡 使用 'source venv/bin/activate' 来激活虚拟环境"
-fi
 
-# 升级 pip
+# 升级 pip 并安装依赖
 echo "🔄 升级 pip..."
 pip3 install --upgrade pip
 
-# 安装依赖
 echo "📦 安装依赖包..."
 pip3 install -r requirements.txt
-
-# 安装开发依赖（可选）
-read -p "是否安装开发依赖？(y/n): " install_dev
-if [[ $install_dev =~ ^[Yy]$ ]]; then
-    echo "🔧 安装开发依赖..."
-    pip3 install -e ".[dev]"
-else
-    echo "🔧 安装基本依赖..."
-    pip3 install -e .
-fi
+pip3 install -e .
 
 # 创建配置目录
 echo "⚙️ 创建配置目录..."
