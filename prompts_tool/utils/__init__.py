@@ -1,6 +1,4 @@
-"""
-工具模块 - 包含剪贴板操作等实用工具
-"""
+"""Utility modules including clipboard and other helpers."""
 
 from .clipboard import ClipboardManager
 
