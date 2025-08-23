@@ -89,21 +89,34 @@ def create_app():
             return
     
     # 主界面
-    tab1, tab2, tab3 = st.tabs(["🔍 搜索 Prompt", "📚 浏览 Prompt", "📝 变量填充"])
+    tab1, tab2 = st.tabs(["🔍 搜索和浏览", "📝 自定义 Prompt"])
     
     with tab1:
-        st.header("🔍 搜索 Prompt (关键词搜索)")
+        st.header("🔍 搜索和浏览 Prompt")
         
-        # 搜索输入
-        search_query = st.text_input(
-            "输入你的需求描述",
-            placeholder="例如：Python 函数文档"
-        )
+        # 顶部控制栏
+        col1, col2, col3 = st.columns([2, 1, 1])
         
-        if search_query:
-            try:
-                repo = PromptRepo(config)
-                parser = PromptParser()
+        with col1:
+            search_query = st.text_input(
+                "搜索 Prompt",
+                placeholder="输入关键词搜索，留空则显示所有 Prompt"
+            )
+        
+        with col2:
+            preview_lines = st.number_input("预览行数", min_value=1, max_value=10, value=3)
+        
+        with col3:
+            if st.button("🔄 刷新", use_container_width=True):
+                st.rerun()
+        
+        # 搜索和显示逻辑
+        try:
+            repo = PromptRepo(config)
+            
+            if search_query:
+                # 搜索模式
+                st.subheader(f"🔍 搜索结果: '{search_query}'")
                 
                 with st.spinner("正在搜索..."):
                     # 获取所有 Prompt 文件
@@ -113,7 +126,7 @@ def create_app():
                         st.warning("没有找到 Prompt 文件")
                         return
                     
-                    # 简单的关键词搜索
+                    # 关键词搜索
                     results = []
                     for prompt in all_prompts:
                         score = 0
@@ -144,80 +157,213 @@ def create_app():
                 if results:
                     st.success(f"找到 {len(results)} 个相关 Prompt")
                     
-                    for i, result in enumerate(results[:5], 1):  # 显示前5个
-                        with st.expander(f"#{i} {result['name']} (相关度: {result['score']})"):
-                            st.markdown(f"**文件路径:** `{result['relative_path']}`")
-                            st.markdown(f"**相关度:** {result['score']}")
-                            st.markdown("**内容预览:**")
-                            st.code(result['content'][:500] + "..." if len(result['content']) > 500 else result['content'])
+                    # 显示搜索结果
+                    for i, result in enumerate(results, 1):
+                        with st.expander(f"#{i} {result['name']} (相关度: {result['score']})", expanded=i==1):
+                            # 检查是否有变量
+                            parser = PromptParser()
+                            variables = parser.extract_variables(result['content'])
                             
-                            # 复制按钮
-                            if st.button(f"📋 复制 Prompt #{i}", key=f"copy_{i}"):
-                                clipboard = ClipboardManager()
-                                if clipboard.copy(result['content']):
-                                    st.success("✅ 已复制到剪贴板！")
-                                else:
-                                    st.error("❌ 复制失败！")
+                            if variables:
+                                st.markdown("🔧 **发现变量，可以直接填写：**")
+                                
+                                # 变量输入区域
+                                var_values = {}
+                                var_cols = st.columns(min(3, len(variables)))
+                                
+                                for idx, var_name in enumerate(variables):
+                                    col_idx = idx % len(var_cols)
+                                    with var_cols[col_idx]:
+                                        # 尝试从环境变量获取默认值
+                                        env_value = os.environ.get(f"PROMPT_{var_name.upper()}", "")
+                                        
+                                        value = st.text_input(
+                                            f"变量: {var_name}",
+                                            value=env_value,
+                                            key=f"search_var_{i}_{var_name}",
+                                            help=f"环境变量 PROMPT_{var_name.upper()} 的默认值: {env_value}" if env_value else None
+                                        )
+                                        var_values[var_name] = value
+                                
+                                # 生成和复制按钮
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    if st.button("🚀 生成最终 Prompt", key=f"generate_search_{i}", use_container_width=True):
+                                        filled_prompt = parser.fill_variables(result['content'], var_values)
+                                        st.session_state[f"filled_prompt_search_{i}"] = filled_prompt
+                                        st.session_state[f"show_filled_search_{i}"] = True
+                                
+                                with col2:
+                                    if st.button("📋 复制原始 Prompt", key=f"copy_original_search_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(result['content']):
+                                            st.success("✅ 原始 Prompt 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                # 显示填充后的 Prompt
+                                if st.session_state.get(f"show_filled_search_{i}", False):
+                                    filled_prompt = st.session_state.get(f"filled_prompt_search_{i}", "")
+                                    st.markdown("**✅ 生成的 Prompt：**")
+                                    st.code(filled_prompt)
+                                    
+                                    if st.button("📋 复制生成的 Prompt", key=f"copy_filled_search_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(filled_prompt):
+                                            st.success("✅ 生成的 Prompt 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                st.markdown("---")
+                            
+                            # 显示 Prompt 信息
+                            col1, col2 = st.columns([3, 1])
+                            
+                            with col1:
+                                st.markdown(f"**文件路径:** `{result['relative_path']}`")
+                                st.markdown(f"**摘要:** {result['summary']}")
+                                
+                                # 内容预览
+                                st.markdown("**内容预览:**")
+                                preview_content = result['content'][:500] + "..." if len(result['content']) > 500 else result['content']
+                                st.code(preview_content)
+                                
+                                # 查看完整内容
+                                if st.button(f"👀 查看完整内容", key=f"view_search_{i}"):
+                                    st.text_area("完整内容", result['content'], height=300, key=f"content_search_{i}")
+                            
+                            with col2:
+                                # 如果没有变量，显示简单的复制按钮
+                                if not variables:
+                                    if st.button(f"📋 复制", key=f"copy_search_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(result['content']):
+                                            st.success("✅ 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                # 变量信息
+                                if variables:
+                                    st.markdown("**🔧 变量列表:**")
+                                    for var in variables:
+                                        st.markdown(f"- `{var}`")
                 else:
                     st.warning("没有找到相关的 Prompt")
+                    st.info("💡 尝试使用不同的关键词，或者留空搜索框查看所有 Prompt")
+            else:
+                # 浏览模式 - 显示所有 Prompt
+                st.subheader("📚 所有 Prompt 文件")
+                
+                # 过滤选项
+                filter_keyword = st.text_input("按关键词过滤", placeholder="输入关键词进行过滤")
+                
+                # 获取 Prompt 列表
+                prompts = repo.list_prompts(
+                    preview_lines=preview_lines,
+                    filter_keyword=filter_keyword
+                )
+                
+                if prompts:
+                    st.success(f"找到 {len(prompts)} 个 Prompt 文件")
                     
-            except Exception as e:
-                st.error(f"搜索失败: {e}")
+                    # 显示所有 Prompt
+                    for i, prompt in enumerate(prompts, 1):
+                        with st.expander(f"📄 {prompt['name']}", expanded=i<=3):  # 前3个默认展开
+                            # 检查是否有变量
+                            content = repo.get_prompt_content(prompt['file_path'])
+                            parser = PromptParser()
+                            variables = parser.extract_variables(content)
+                            
+                            if variables:
+                                st.markdown("🔧 **发现变量，可以直接填写：**")
+                                
+                                # 变量输入区域
+                                var_values = {}
+                                var_cols = st.columns(min(3, len(variables)))
+                                
+                                for idx, var_name in enumerate(variables):
+                                    col_idx = idx % len(var_cols)
+                                    with var_cols[col_idx]:
+                                        # 尝试从环境变量获取默认值
+                                        env_value = os.environ.get(f"PROMPT_{var_name.upper()}", "")
+                                        
+                                        value = st.text_input(
+                                            f"变量: {var_name}",
+                                            value=env_value,
+                                            key=f"browse_var_{i}_{var_name}",
+                                            help=f"环境变量 PROMPT_{var_name.upper()} 的默认值: {env_value}" if env_value else None
+                                        )
+                                        var_values[var_name] = value
+                                
+                                # 生成和复制按钮
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    if st.button("🚀 生成最终 Prompt", key=f"generate_browse_{i}", use_container_width=True):
+                                        filled_prompt = parser.fill_variables(content, var_values)
+                                        st.session_state[f"filled_prompt_browse_{i}"] = filled_prompt
+                                        st.session_state[f"show_filled_browse_{i}"] = True
+                                
+                                with col2:
+                                    if st.button("📋 复制原始 Prompt", key=f"copy_original_browse_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(content):
+                                            st.success("✅ 原始 Prompt 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                # 显示填充后的 Prompt
+                                if st.session_state.get(f"show_filled_browse_{i}", False):
+                                    filled_prompt = st.session_state.get(f"filled_prompt_browse_{i}", "")
+                                    st.markdown("**✅ 生成的 Prompt：**")
+                                    st.code(filled_prompt)
+                                    
+                                    if st.button("📋 复制生成的 Prompt", key=f"copy_filled_browse_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(filled_prompt):
+                                            st.success("✅ 生成的 Prompt 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                st.markdown("---")
+                            
+                            # 显示 Prompt 信息
+                            col1, col2 = st.columns([3, 1])
+                            
+                            with col1:
+                                st.markdown(f"**路径:** `{prompt['relative_path']}`")
+                                st.markdown(f"**摘要:** {prompt['summary']}")
+                                
+                                if 'preview' in prompt:
+                                    st.markdown("**预览:**")
+                                    st.code(prompt['preview'])
+                                
+                                # 查看完整内容
+                                if st.button(f"👀 查看完整内容", key=f"view_browse_{i}"):
+                                    st.text_area("完整内容", content, height=300, key=f"content_browse_{i}")
+                            
+                            with col2:
+                                # 如果没有变量，显示简单的复制按钮
+                                if not variables:
+                                    if st.button(f"📋 复制", key=f"copy_browse_{i}", use_container_width=True):
+                                        clipboard = ClipboardManager()
+                                        if clipboard.copy(content):
+                                            st.success("✅ 已复制！")
+                                        else:
+                                            st.error("❌ 复制失败！")
+                                
+                                # 变量信息
+                                if variables:
+                                    st.markdown("**🔧 变量列表:**")
+                                    for var in variables:
+                                        st.markdown(f"- `{var}`")
+                else:
+                    st.warning("没有找到 Prompt 文件")
+                    
+        except Exception as e:
+            st.error(f"操作失败: {e}")
     
     with tab2:
-        st.header("📚 浏览 Prompt")
-        
-        try:
-            repo = PromptRepo(config)
-            
-            # 过滤选项
-            col1, col2 = st.columns(2)
-            with col1:
-                filter_keyword = st.text_input("关键词过滤", placeholder="输入关键词进行过滤")
-            with col2:
-                preview_lines = st.number_input("预览行数", min_value=1, max_value=10, value=3)
-            
-            if st.button("🔄 刷新列表"):
-                st.rerun()
-            
-            # 获取 Prompt 列表
-            prompts = repo.list_prompts(
-                preview_lines=preview_lines,
-                filter_keyword=filter_keyword
-            )
-            
-            if prompts:
-                st.success(f"找到 {len(prompts)} 个 Prompt 文件")
-                
-                for prompt in prompts:
-                    with st.expander(f"📄 {prompt['name']}"):
-                        st.markdown(f"**路径:** `{prompt['relative_path']}`")
-                        st.markdown(f"**摘要:** {prompt['summary']}")
-                        
-                        if 'preview' in prompt:
-                            st.markdown("**预览:**")
-                            st.code(prompt['preview'])
-                        
-                        # 查看完整内容
-                        if st.button(f"👀 查看完整内容", key=f"view_{prompt['name']}"):
-                            full_content = repo.get_prompt_content(prompt['file_path'])
-                            st.text_area("完整内容", full_content, height=300, key=f"content_{prompt['name']}")
-                            
-                            # 复制按钮
-                            if st.button(f"📋 复制内容", key=f"copy_full_{prompt['name']}"):
-                                clipboard = ClipboardManager()
-                                if clipboard.copy(full_content):
-                                    st.success("✅ 已复制到剪贴板！")
-                                else:
-                                    st.error("❌ 复制失败！")
-            else:
-                st.warning("没有找到 Prompt 文件")
-                
-        except Exception as e:
-            st.error(f"获取 Prompt 列表失败: {e}")
-    
-    with tab3:
-        st.header("📝 变量填充")
+        st.header("📝 自定义 Prompt")
         
         st.info("在这个标签页中，你可以手动输入 Prompt 内容并填充变量")
         
@@ -240,29 +386,48 @@ def create_app():
                     st.subheader("🔧 填写变量")
                     var_values = {}
                     
-                    for var_name in variables:
-                        # 尝试从环境变量获取默认值
-                        env_value = os.environ.get(f"PROMPT_{var_name.upper()}", "")
-                        
-                        value = st.text_input(
-                            f"变量: {var_name}",
-                            value=env_value,
-                            help=f"环境变量 PROMPT_{var_name.upper()} 的默认值: {env_value}" if env_value else None
-                        )
-                        var_values[var_name] = value
+                    # 使用列布局优化变量输入
+                    var_cols = st.columns(min(3, len(variables)))
+                    for idx, var_name in enumerate(variables):
+                        col_idx = idx % len(var_cols)
+                        with var_cols[col_idx]:
+                            # 尝试从环境变量获取默认值
+                            env_value = os.environ.get(f"PROMPT_{var_name.upper()}", "")
+                            
+                            value = st.text_input(
+                                f"变量: {var_name}",
+                                value=env_value,
+                                key=f"custom_var_{var_name}",
+                                help=f"环境变量 PROMPT_{var_name.upper()} 的默认值: {env_value}" if env_value else None
+                            )
+                            var_values[var_name] = value
                     
-                    # 填充结果
-                    if st.button("🚀 生成最终 Prompt"):
-                        filled_prompt = parser.fill_variables(prompt_text, var_values)
-                        
+                    # 生成和复制按钮
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🚀 生成最终 Prompt", use_container_width=True):
+                            filled_prompt = parser.fill_variables(prompt_text, var_values)
+                            st.session_state["custom_filled_prompt"] = filled_prompt
+                            st.session_state["show_custom_filled"] = True
+                    
+                    with col2:
+                        if st.button("📋 复制原始 Prompt", use_container_width=True):
+                            clipboard = ClipboardManager()
+                            if clipboard.copy(prompt_text):
+                                st.success("✅ 原始 Prompt 已复制！")
+                            else:
+                                st.error("❌ 复制失败！")
+                    
+                    # 显示填充后的 Prompt
+                    if st.session_state.get("show_custom_filled", False):
+                        filled_prompt = st.session_state.get("custom_filled_prompt", "")
                         st.subheader("✅ 生成的 Prompt")
                         st.code(filled_prompt)
                         
-                        # 复制按钮
-                        if st.button("📋 复制到剪贴板"):
+                        if st.button("📋 复制生成的 Prompt", use_container_width=True):
                             clipboard = ClipboardManager()
                             if clipboard.copy(filled_prompt):
-                                st.success("✅ 已复制到剪贴板！")
+                                st.success("✅ 生成的 Prompt 已复制！")
                             else:
                                 st.error("❌ 复制失败！")
                 else:
