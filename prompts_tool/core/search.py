@@ -1,6 +1,4 @@
-"""
-搜索模块 - 使用 SentenceTransformers 和 FAISS 进行语义搜索
-"""
+"""Search module using SentenceTransformers and FAISS for semantic search"""
 
 import os
 import pickle
@@ -15,7 +13,7 @@ from .repo import PromptRepo
 
 
 class PromptSearcher:
-    """Prompt 语义搜索器"""
+    """Prompt semantic searcher"""
     
     def __init__(self, config: Config, repo: PromptRepo):
         self.config = config
@@ -29,7 +27,7 @@ class PromptSearcher:
         self._init_model()
     
     def _init_model(self):
-        """初始化 SentenceTransformer 模型"""
+        """Initialize SentenceTransformer model"""
         try:
             print(f"🔄 正在加载模型: {self.config.model.name}")
             self.model = SentenceTransformer(self.config.model.name, device=self.config.model.device)
@@ -40,7 +38,7 @@ class PromptSearcher:
             self.model = None
     
     def _build_index(self) -> bool:
-        """构建 FAISS 索引"""
+        """Build FAISS index"""
         if not self.model:
             print("❌ 模型未加载，无法构建索引")
             return False
@@ -52,7 +50,7 @@ class PromptSearcher:
         print("🔄 正在构建搜索索引...")
         
         try:
-            # 获取所有 Prompt 文件
+            # Get all prompt files
             prompt_files = self.repo.get_prompt_files()
             
             if not prompt_files:
@@ -60,18 +58,25 @@ class PromptSearcher:
                 return False
             
             print(f"📁 找到 {len(prompt_files)} 个 Prompt 文件")
-            
-            # 提取文本和元数据
+
+            # Extract text and metadata
             texts = []
             self.prompt_data = []
-            
+
             for file_path in prompt_files:
                 content = self.repo.get_prompt_content(file_path)
                 if content.strip():
                     texts.append(content)
+                    relative = file_path
+                    for rp in self.repo.repo_paths:
+                        try:
+                            relative = file_path.relative_to(rp)
+                            break
+                        except ValueError:
+                            continue
                     self.prompt_data.append({
                         "file_path": file_path,
-                        "relative_path": str(file_path.relative_to(self.repo.repo_path)),
+                        "relative_path": str(relative),
                         "name": file_path.name,
                         "content": content
                     })

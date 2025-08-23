@@ -22,7 +22,7 @@ def demo_config():
     
     config = Config.load()
     print(f"仓库 URL: {config.repo.url}")
-    print(f"本地路径: {config.repo.local_path}")
+    print(f"本地路径: {config.repo.local_paths[0]}")
     print(f"模型名称: {config.model.name}")
     print(f"UI 端口: {config.ui.port}")
     print()

@@ -266,7 +266,7 @@ def handle_ui(config: Config):
         import sys
         
         # 获取简化版 Streamlit 应用路径
-        app_path = Path(__file__).parent / "ui" / "streamlit_app_simple.py"
+        app_path = Path(__file__).parent / "ui" / "streamlit_app.py"
         
         if not app_path.exists():
             console.print("❌ 找不到简化版 Streamlit 应用文件", style="red")

@@ -1,6 +1,4 @@
-"""
-仓库管理模块 - 处理 Git 操作和 Prompt 文件管理
-"""
+"""Repository management module handling Git operations and prompt files"""
 
 import os
 import subprocess
@@ -11,39 +9,35 @@ from .config import Config
 
 
 class PromptRepo:
-    """Prompt 仓库管理类"""
-    
+    """Prompt repository manager"""
+
     def __init__(self, config: Config):
         self.config = config
+        self.repo_paths = config.get_repo_paths()
         self.repo_path = config.get_repo_path()
         self.index_path = config.get_index_path()
     
     def exists(self) -> bool:
-        """检查本地仓库是否存在"""
-        # 检查路径是否存在且包含 Prompt 文件
-        if not self.repo_path.exists():
-            return False
-        
-        # 检查是否有 Prompt 文件
+        """Check if any local repository exists"""
         prompt_files = self.get_prompt_files()
         return len(prompt_files) > 0
     
     def clone(self) -> bool:
-        """克隆远程仓库"""
+        """Clone remote repository to the primary path"""
         try:
             if self.repo_path.exists():
                 shutil.rmtree(self.repo_path)
-            
+
             self.repo_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             cmd = [
-                "git", "clone", 
+                "git", "clone",
                 "-b", self.config.repo.branch,
-                self.config.repo.url, 
+                self.config.repo.url,
                 str(self.repo_path)
             ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
             print(f"✅ 成功克隆仓库到: {self.repo_path}")
             return True
             
@@ -56,38 +50,35 @@ class PromptRepo:
             return False
     
     def pull(self) -> bool:
-        """拉取最新更新"""
+        """Pull latest changes for the primary repository"""
         try:
             if not self.exists():
                 return self.clone()
-            
-            # 检查是否是 Git 仓库
+
             if (self.repo_path / ".git").exists():
-                # 切换到指定分支
                 subprocess.run(
                     ["git", "checkout", self.config.repo.branch],
                     cwd=self.repo_path,
                     capture_output=True,
-                    check=True
+                    check=True,
                 )
-                
-                # 拉取最新更新
+
                 result = subprocess.run(
                     ["git", "pull", "origin", self.config.repo.branch],
                     cwd=self.repo_path,
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
-                
-                print(f"✅ 成功更新仓库")
+
+                print("✅ 成功更新仓库")
                 if result.stdout.strip():
                     print(f"更新内容: {result.stdout.strip()}")
                 return True
             else:
                 print("⚠️ 本地目录不是 Git 仓库，跳过更新")
                 return True
-            
+
         except subprocess.CalledProcessError as e:
             print(f"❌ 更新仓库失败: {e}")
             print(f"错误输出: {e.stderr}")
@@ -110,25 +101,22 @@ class PromptRepo:
             return self.clone()
     
     def get_prompt_files(self, extensions: Optional[List[str]] = None) -> List[Path]:
-        """获取所有 Prompt 文件"""
-        if not self.repo_path.exists():
-            return []
-        
+        """Get all prompt files from configured paths"""
         if extensions is None:
             extensions = [".txt", ".md", ".prompt"]
-        
-        prompt_files = []
-        
-        for ext in extensions:
-            prompt_files.extend(self.repo_path.rglob(f"*{ext}"))
-        
-        # 过滤掉隐藏文件和 .git 目录
+
+        prompt_files: List[Path] = []
+        for repo_path in self.repo_paths:
+            if not repo_path.exists():
+                continue
+            for ext in extensions:
+                prompt_files.extend(repo_path.rglob(f"*{ext}"))
+
         prompt_files = [
-            f for f in prompt_files 
-            if not f.name.startswith(".")  # 只过滤文件名，不过滤路径
-            and ".git" not in f.parts
+            f for f in prompt_files
+            if not f.name.startswith(".") and ".git" not in f.parts
         ]
-        
+
         return sorted(prompt_files)
     
     def get_prompt_content(self, file_path: Path) -> str:
@@ -161,7 +149,7 @@ class PromptRepo:
         if not self.exists():
             print("❌ 本地仓库不存在，请先运行 `prompts --update`")
             return []
-        
+
         prompt_files = self.get_prompt_files()
         
         if filter_keyword:
@@ -173,7 +161,13 @@ class PromptRepo:
         
         results = []
         for file_path in prompt_files:
-            relative_path = file_path.relative_to(self.repo_path)
+            relative_path = file_path
+            for repo_path in self.repo_paths:
+                try:
+                    relative_path = file_path.relative_to(repo_path)
+                    break
+                except ValueError:
+                    continue
             
             result = {
                 "file_path": file_path,
@@ -190,13 +184,11 @@ class PromptRepo:
         return results
     
     def search_prompts(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """搜索相关的 Prompt（需要先建立索引）"""
-        # 这个方法将在 search.py 中实现
-        # 这里只是占位符
+        """Search prompts (placeholder for future implementation)"""
         pass
     
     def get_file_info(self, file_path: Path) -> Dict[str, Any]:
-        """获取文件信息"""
+        """Get file information"""
         if not file_path.exists():
             return {}
         
