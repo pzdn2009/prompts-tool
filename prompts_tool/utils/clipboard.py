@@ -1,24 +1,22 @@
-"""
-剪贴板管理模块 - 处理跨平台的剪贴板操作
-"""
+"""Clipboard management utilities for cross-platform clipboard operations."""
 
 import platform
 from typing import Optional
 
 
 class ClipboardManager:
-    """跨平台剪贴板管理器"""
+    """Cross-platform clipboard manager."""
     
     def __init__(self):
         self.system = platform.system()
         self._init_clipboard()
     
     def _init_clipboard(self):
-        """初始化剪贴板"""
+        """Initialize clipboard support for current platform."""
         try:
             if self.system == "Darwin":  # macOS
                 import subprocess
-                # 检查 pbcopy 是否可用
+                # Ensure pbcopy is available
                 subprocess.run(["which", "pbcopy"], capture_output=True, check=True)
                 self._copy_method = "pbcopy"
                 self._paste_method = "pbpaste"
@@ -28,33 +26,33 @@ class ClipboardManager:
                     pyperclip.copy("test")
                     self._copy_method = "pyperclip"
                 except Exception:
-                    # 尝试使用 xclip
+                    # Try using xclip
                     import subprocess
                     try:
                         subprocess.run(["which", "xclip"], capture_output=True, check=True)
                         self._copy_method = "xclip"
                     except subprocess.CalledProcessError:
-                        # 尝试使用 xsel
+                        # Fallback to xsel
                         try:
                             subprocess.run(["which", "xsel"], capture_output=True, check=True)
                             self._copy_method = "xsel"
                         except subprocess.CalledProcessError:
-                            raise Exception("Linux 系统需要安装 pyperclip, xclip 或 xsel")
+                            raise Exception("Linux requires pyperclip, xclip, or xsel to be installed")
             elif self.system == "Windows":
                 import pyperclip
                 pyperclip.copy("test")
                 self._copy_method = "pyperclip"
             else:
-                raise Exception(f"不支持的操作系统: {self.system}")
+                raise Exception(f"Unsupported operating system: {self.system}")
                 
         except Exception as e:
-            print(f"警告: 剪贴板初始化失败: {e}")
+            print(f"Warning: clipboard initialization failed: {e}")
             self._copy_method = None
     
     def copy(self, text: str) -> bool:
-        """复制文本到剪贴板"""
+        """Copy text to the clipboard."""
         if not self._copy_method:
-            print("❌ 剪贴板不可用")
+            print("❌ Clipboard unavailable")
             return False
         
         try:
@@ -71,17 +69,17 @@ class ClipboardManager:
                 import subprocess
                 subprocess.run(["xsel", "--input", "--clipboard"], input=text.encode(), check=True)
             
-            print("✅ 已复制到剪贴板")
+            print("✅ Copied to clipboard")
             return True
             
         except Exception as e:
-            print(f"❌ 复制到剪贴板失败: {e}")
+            print(f"❌ Failed to copy to clipboard: {e}")
             return False
     
     def paste(self) -> Optional[str]:
-        """从剪贴板粘贴文本"""
+        """Paste text from the clipboard."""
         if not self._copy_method:
-            print("❌ 剪贴板不可用")
+            print("❌ Clipboard unavailable")
             return None
         
         try:
@@ -102,15 +100,15 @@ class ClipboardManager:
                 return result.stdout
             
         except Exception as e:
-            print(f"❌ 从剪贴板粘贴失败: {e}")
+            print(f"❌ Failed to paste from clipboard: {e}")
             return None
         
         return None
     
     def is_available(self) -> bool:
-        """检查剪贴板是否可用"""
+        """Check whether the clipboard is available."""
         return self._copy_method is not None
     
     def get_system_info(self) -> str:
-        """获取系统信息"""
-        return f"系统: {self.system}, 剪贴板方法: {self._copy_method or '不可用'}"
+        """Get clipboard-related system information."""
+        return f"System: {self.system}, Method: {self._copy_method or 'Unavailable'}"

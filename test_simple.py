@@ -1,77 +1,75 @@
 #!/usr/bin/env python3
-"""
-简化版功能测试 - 只测试基本功能
-"""
+"""Simplified feature tests - only basic functionality."""
 
 import sys
 from pathlib import Path
 
-# 添加项目根目录到 Python 路径
+# Add project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 def test_config():
-    """测试配置管理"""
+    """Test configuration management."""
     try:
         from prompts_tool.core.config import Config
         
-        # 创建默认配置
+        # Create default configuration
         config = Config()
-        print(f"✅ 配置创建成功")
-        print(f"   仓库 URL: {config.repo.url}")
-        print(f"   本地路径: {config.repo.local_path}")
-        print(f"   模型名称: {config.model.name}")
+        print("✅ Configuration created successfully")
+        print(f"   Repository URL: {config.repo.url}")
+        print(f"   Local path: {config.repo.local_path}")
+        print(f"   Model name: {config.model.name}")
         
         return True
     except Exception as e:
-        print(f"❌ 配置测试失败: {e}")
+        print(f"❌ Configuration test failed: {e}")
         return False
 
 def test_parser():
-    """测试占位符解析"""
+    """Test placeholder parsing."""
     try:
         from prompts_tool.core.parser import PromptParser
         
         parser = PromptParser()
         
-        # 测试文本
-        test_text = "请帮我写一个关于 {{topic}} 的 {{style}} 文章，长度约 {{length}} 字。"
+        # Test text
+        test_text = "Please help me write a {{style}} article about {{topic}} around {{length}} words."
         
-        # 提取变量
+        # Extract variables
         variables = parser.extract_variables(test_text)
-        print(f"✅ 变量提取成功: {variables}")
+        print(f"✅ Variable extraction succeeded: {variables}")
         
-        # 测试变量填充
-        var_values = {"topic": "人工智能", "style": "科普", "length": "1000"}
+        # Test variable filling
+        var_values = {"topic": "AI", "style": "popular science", "length": "1000"}
         filled_text = parser.fill_variables(test_text, var_values)
-        print(f"✅ 变量填充成功")
-        print(f"   填充后: {filled_text}")
+        print("✅ Variable filling succeeded")
+        print(f"   Filled: {filled_text}")
         
         return True
     except Exception as e:
-        print(f"❌ 解析器测试失败: {e}")
+        print(f"❌ Parser test failed: {e}")
         return False
 
 def test_clipboard():
-    """测试剪贴板功能"""
+    """Test clipboard functionality."""
     try:
         from prompts_tool.utils.clipboard import ClipboardManager
         
         clipboard = ClipboardManager()
-        print(f"✅ 剪贴板初始化成功: {clipboard.get_system_info()}")
+        print(f"✅ Clipboard initialized: {clipboard.get_system_info()}")
         
         if clipboard.is_available():
-            print("✅ 剪贴板可用")
+            print("✅ Clipboard available")
             return True
         else:
-            print("⚠️ 剪贴板不可用")
+            print("⚠️ Clipboard unavailable")
             return False
     except Exception as e:
-        print(f"❌ 剪贴板测试失败: {e}")
+        print(f"❌ Clipboard test failed: {e}")
         return False
 
 def test_repo():
-    """测试仓库管理（不依赖 Git）"""
+    """Test repository management (without Git)."""
     try:
         from prompts_tool.core.config import Config
         from prompts_tool.core.repo import PromptRepo
@@ -79,54 +77,54 @@ def test_repo():
         config = Config()
         repo = PromptRepo(config)
         
-        print(f"✅ 仓库管理初始化成功")
-        print(f"   仓库路径: {repo.repo_path}")
-        print(f"   索引路径: {repo.index_path}")
+        print("✅ Repository management initialized")
+        print(f"   Repository path: {repo.repo_path}")
+        print(f"   Index path: {repo.index_path}")
         
-        # 测试路径生成
+        # Test path generation
         repo_path = config.get_repo_path()
         index_path = config.get_index_path()
-        print(f"   配置路径: {repo_path}")
-        print(f"   配置索引: {index_path}")
+        print(f"   Config path: {repo_path}")
+        print(f"   Config index: {index_path}")
         
         return True
     except Exception as e:
-        print(f"❌ 仓库管理测试失败: {e}")
+        print(f"❌ Repository management test failed: {e}")
         return False
 
 def main():
-    """运行所有测试"""
-    print("🧪 开始运行简化版功能测试...\n")
+    """Run all tests."""
+    print("🧪 Starting simplified feature tests...\n")
     
     tests = [
-        ("配置管理", test_config),
-        ("占位符解析", test_parser),
-        ("剪贴板功能", test_clipboard),
-        ("仓库管理", test_repo),
+        ("Configuration", test_config),
+        ("Placeholder parsing", test_parser),
+        ("Clipboard", test_clipboard),
+        ("Repository", test_repo),
     ]
     
     passed = 0
     total = len(tests)
     
     for test_name, test_func in tests:
-        print(f"🔍 测试: {test_name}")
+        print(f"🔍 Testing: {test_name}")
         try:
             if test_func():
                 passed += 1
-                print(f"✅ {test_name} 测试通过\n")
+                print(f"✅ {test_name} passed\n")
             else:
-                print(f"❌ {test_name} 测试失败\n")
+                print(f"❌ {test_name} failed\n")
         except Exception as e:
-            print(f"❌ {test_name} 测试异常: {e}\n")
+            print(f"❌ {test_name} raised an exception: {e}\n")
     
     print("=" * 50)
-    print(f"📊 测试结果: {passed}/{total} 通过")
+    print(f"📊 Results: {passed}/{total} passed")
     
     if passed == total:
-        print("🎉 所有测试通过！")
+        print("🎉 All tests passed!")
         return 0
     else:
-        print("⚠️ 部分测试失败，请检查安装和配置")
+        print("⚠️ Some tests failed, please check installation and configuration")
         return 1
 
 if __name__ == "__main__":
