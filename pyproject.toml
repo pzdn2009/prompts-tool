@@ -42,7 +42,7 @@ dev = [
 ]
 
 [project.scripts]
-prompts = "prompts_tool.cli_fixed:main"
+prompts = "prompts_tool.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/prompts-tool"
