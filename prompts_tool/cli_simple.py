@@ -41,6 +41,7 @@ def main(
     query: Optional[str] = typer.Argument(None, help="搜索查询或需求描述"),
     list_prompts: bool = typer.Option(False, "--list", "-l", help="列出所有 Prompt 文件"),
     update: bool = typer.Option(False, "--update", "-u", help="更新远程仓库的 Prompt Repo"),
+    ui: bool = typer.Option(False, "--ui", help="启动 Web 界面"),
     preview: Optional[int] = typer.Option(None, "--preview", "-p", help="显示前 N 行预览"),
     filter_keyword: Optional[str] = typer.Option(None, "--filter", "-f", help="按关键词过滤"),
     config_path: Optional[str] = typer.Option(None, "--config", help="配置文件路径"),
@@ -52,6 +53,7 @@ def main(
     - 搜索 Prompt: prompts "需求描述"
     - 列出 Prompt: prompts --list
     - 更新仓库: prompts --update
+    - 启动 Web 界面: prompts --ui
     """
     
     # 打印横幅
@@ -75,6 +77,8 @@ def main(
         handle_update(repo)
     elif list_prompts:
         handle_list_prompts(repo, preview, filter_keyword)
+    elif ui:
+        handle_ui(config)
     elif query:
         handle_simple_search(query, repo, parser, clipboard)
     else:
@@ -249,6 +253,7 @@ def show_help():
       prompts "需求描述"           # 搜索最相关的 Prompt 并填充变量
       prompts --list              # 列出所有 Prompt 文件
       prompts --update            # 更新远程仓库的 Prompt Repo
+      prompts --ui                # 启动 Web 界面
     
     高级选项:
       prompts --list --preview 5  # 显示前 5 行预览
@@ -258,11 +263,47 @@ def show_help():
       prompts "帮我写一个 Python 函数的文档字符串"
       prompts --list --preview 3 --filter "AI"
       prompts --update
+      prompts --ui
     
     注意: 这是简化版本，搜索功能基于关键词匹配，不包含语义搜索。
     """
     
     console.print(Panel(help_text, title="📖 帮助信息", border_style="green"))
+
+
+def handle_ui(config: Config):
+    """启动 Web 界面"""
+    console.print("🌐 正在启动 Web 界面...", style="yellow")
+    
+    try:
+        import subprocess
+        import sys
+        
+        # 获取简化版 Streamlit 应用路径
+        app_path = Path(__file__).parent / "ui" / "streamlit_app_simple.py"
+        
+        if not app_path.exists():
+            console.print("❌ 找不到简化版 Streamlit 应用文件", style="red")
+            return
+        
+        # 启动 Streamlit
+        cmd = [
+            sys.executable, "-m", "streamlit", "run", str(app_path),
+            "--server.port", str(config.ui.port),
+            "--server.address", config.ui.host
+        ]
+        
+        console.print(f"🚀 启动命令: {' '.join(cmd)}", style="blue")
+        console.print(f"🌐 访问地址: http://{config.ui.host}:{config.ui.port}", style="green")
+        console.print("💡 这是简化版本，使用关键词搜索，无需安装重型模型", style="yellow")
+        
+        # 启动进程
+        subprocess.run(cmd)
+        
+    except ImportError:
+        console.print("❌ 未安装 Streamlit，请运行: pip install streamlit", style="red")
+    except Exception as e:
+        console.print(f"❌ 启动 Web 界面失败: {e}", style="red")
 
 
 if __name__ == "__main__":
