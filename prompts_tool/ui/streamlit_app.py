@@ -110,20 +110,6 @@ def create_app():
                 else:
                     st.error("❌ Repository update failed")
 
-        # Model settings
-        st.subheader("🧠 Model Settings")
-        model_name = st.selectbox(
-            "Model name",
-            ["all-MiniLM-L6-v2", "all-mpnet-base-v2", "all-MiniLM-L12-v2"],
-            index=0,
-        )
-        device = st.selectbox("Device", ["cpu", "cuda"], index=0)
-
-        if st.button("💾 Save configuration"):
-            config.model.name = model_name
-            config.model.device = device
-            config.save()
-            st.success("✅ Configuration saved")
 
         # Index information
         st.subheader("🔍 Index Status")
@@ -284,4 +270,3 @@ def create_app():
 
 if __name__ == "__main__":
     create_app()
-

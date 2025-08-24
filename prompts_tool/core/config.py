@@ -18,13 +18,6 @@ class RepoConfig:
 
 
 @dataclass
-class ModelConfig:
-    """Model configuration"""
-    name: str = "all-MiniLM-L6-v2"
-    device: str = "cpu"
-
-
-@dataclass
 class UIConfig:
     """UI configuration"""
     port: int = 8501
@@ -35,7 +28,6 @@ class UIConfig:
 class Config:
     """Main configuration class"""
     repo: RepoConfig = field(default_factory=RepoConfig)
-    model: ModelConfig = field(default_factory=ModelConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     
     def __post_init__(self):
@@ -76,14 +68,6 @@ class Config:
                 if "branch" in repo_data:
                     config.repo.branch = repo_data["branch"]
             
-            # Update model configuration
-            if "model" in config_data:
-                model_data = config_data["model"]
-                if "name" in model_data:
-                    config.model.name = model_data["name"]
-                if "device" in model_data:
-                    config.model.device = model_data["device"]
-            
             # Update UI configuration
             if "ui" in config_data:
                 ui_data = config_data["ui"]
@@ -111,10 +95,6 @@ class Config:
                 "url": self.repo.url,
                 "local_paths": self.repo.local_paths,
                 "branch": self.repo.branch,
-            },
-            "model": {
-                "name": self.model.name,
-                "device": self.model.device,
             },
             "ui": {
                 "port": self.ui.port,
