@@ -2,6 +2,7 @@
 
 import streamlit as st
 import sys
+import os
 from pathlib import Path
 
 # Add project root to Python path
@@ -13,6 +14,61 @@ from prompts_tool.core.repo import PromptRepo
 from prompts_tool.core.search import PromptSearcher
 from prompts_tool.core.parser import PromptParser
 from prompts_tool.utils.clipboard import ClipboardManager
+
+
+def render_prompt_with_variables(content: str, key_prefix: str) -> None:
+    """Display variable inputs, preview and copy functionality for a prompt."""
+    parser = PromptParser()
+    clipboard = ClipboardManager()
+    variables = parser.extract_variables(content)
+
+    if variables:
+        st.markdown("🔧 发现变量，可以直接填写：")
+        var_cols = st.columns(min(3, len(variables)))
+        var_values = {}
+        for idx, var_name in enumerate(variables):
+            col_idx = idx % len(var_cols)
+            with var_cols[col_idx]:
+                env_value = os.environ.get(f"PROMPT_{var_name.upper()}", "")
+                var_values[var_name] = st.text_input(
+                    var_name,
+                    value=env_value,
+                    key=f"{key_prefix}_{var_name}",
+                    help=(
+                        f"Default from PROMPT_{var_name.upper()}: {env_value}"
+                        if env_value
+                        else None
+                    ),
+                )
+
+        btn_cols = st.columns(2)
+        with btn_cols[0]:
+            if st.button("🚀 生成最终 Prompt", key=f"{key_prefix}_generate"):
+                filled = parser.fill_variables(content, var_values)
+                st.session_state[f"{key_prefix}_filled"] = filled
+                st.session_state[f"{key_prefix}_show_filled"] = True
+        with btn_cols[1]:
+            if st.button("📋 复制原始 Prompt", key=f"{key_prefix}_copy_raw"):
+                if clipboard.copy(content):
+                    st.success("✅ Copied to clipboard")
+                else:
+                    st.error("❌ Copy failed")
+
+        if st.session_state.get(f"{key_prefix}_show_filled"):
+            st.markdown("---")
+            st.markdown("✅ 生成的 Prompt：")
+            st.code(st.session_state[f"{key_prefix}_filled"])
+            if st.button("📋 复制生成的 Prompt", key=f"{key_prefix}_copy_filled"):
+                if clipboard.copy(st.session_state[f"{key_prefix}_filled"]):
+                    st.success("✅ Copied to clipboard")
+                else:
+                    st.error("❌ Copy failed")
+    else:
+        if st.button("📋 复制 Prompt", key=f"{key_prefix}_copy_only"):
+            if clipboard.copy(content):
+                st.success("✅ Copied to clipboard")
+            else:
+                st.error("❌ Copy failed")
 
 
 def create_app():
@@ -134,22 +190,10 @@ def create_app():
                         ):
                             st.markdown(f"**Path:** `{result['relative_path']}`")
                             st.markdown(f"**Score:** {result['score']:.3f}")
-                            st.markdown("**Preview:**")
-                            st.code(
-                                result['content'][:500] + "..."
-                                if len(result['content']) > 500
-                                else result['content']
-                            )
+                            st.markdown("**Content:**")
+                            st.code(result["content"])
 
-                            # Copy button
-                            if st.button(
-                                f"📋 Copy Prompt #{result['rank']}", key=f"copy_{i}"
-                            ):
-                                clipboard = ClipboardManager()
-                                if clipboard.copy(result['content']):
-                                    st.success("✅ Copied to clipboard")
-                                else:
-                                    st.error("❌ Copy failed")
+                            render_prompt_with_variables(result["content"], f"search_{i}")
                 else:
                     st.warning("No related prompts found")
 
@@ -161,36 +205,16 @@ def create_app():
                 if prompts:
                     st.success(f"Found {len(prompts)} prompt files")
 
-                    for prompt in prompts:
+                    for i, prompt in enumerate(prompts):
                         with st.expander(f"📄 {prompt['name']}"):
                             st.markdown(f"**Path:** `{prompt['relative_path']}`")
                             st.markdown(f"**Summary:** {prompt['summary']}")
 
-                            if "preview" in prompt:
-                                st.markdown("**Preview:**")
-                                st.code(prompt["preview"])
+                            full_content = repo.get_prompt_content(prompt["file_path"])
+                            st.markdown("**Content:**")
+                            st.code(full_content)
 
-                            # View full content
-                            if st.button(
-                                f"👀 View full content", key=f"view_{prompt['name']}"
-                            ):
-                                full_content = repo.get_prompt_content(prompt["file_path"])
-                                st.text_area(
-                                    "Full content",
-                                    full_content,
-                                    height=300,
-                                    key=f"content_{prompt['name']}",
-                                )
-
-                                # Copy button
-                                if st.button(
-                                    f"📋 Copy content", key=f"copy_full_{prompt['name']}"
-                                ):
-                                    clipboard = ClipboardManager()
-                                    if clipboard.copy(full_content):
-                                        st.success("✅ Copied to clipboard")
-                                    else:
-                                        st.error("❌ Copy failed")
+                            render_prompt_with_variables(full_content, f"list_{i}")
                 else:
                     st.warning("No prompt files found")
 
